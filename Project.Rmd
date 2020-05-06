@@ -1,0 +1,32 @@
+---
+title: "SDS323_Project"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+```{r cars}
+
+```
+
+## Introduction
+
+
+
+```{r pressure, echo=FALSE}
+
+```
+
+## Methods
+
+### The Data
+
+### The Models
+
+## Results
+
+## Conclusion
