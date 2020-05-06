@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-
+The NFL Scouting Combine is an annual event where prospective NFL players from around the nation show off their physical skills in various events in order to increase their draft position/chance of being drafted. The week-long event is heavily attended by both the media and NFL personnel, and is the subject of much speculation. Every year players see their draft prospects skyrocket or plummet based on their performance. However, it is becoming an increasingly popular opinion that too much weight is placed on Combine results as they do not accurately reflect real football situations. For instance, players will almost never sprint 40 yards in a straight line in an NFL game. Our goal is to determine to what extent it is possible to build statistcal models that predict the draft position and overall carreer success of players based solely on their combine data.
 
 ```{r pressure, echo=FALSE}
 
