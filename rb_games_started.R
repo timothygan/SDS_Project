@@ -38,8 +38,8 @@ while(i <= 30){
     test_cases = setdiff(1:n, train_cases)
     rb_train = rb[train_cases,]
     rb_test = rb[test_cases,]
-    Xtrain = model.matrix(~ . - picktotal - games_played - 1, data=rb_train)
-    Xtest = model.matrix(~ . - picktotal -  games_played - 1, data=rb_test)
+    Xtrain = model.matrix(~ .  - games_played - 1, data=rb_train)
+    Xtest = model.matrix(~ .  -  games_played - 1, data=rb_test)
     
     ytrain = rb_train$games_played
     ytest = rb_test$games_played
