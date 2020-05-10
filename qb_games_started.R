@@ -6,13 +6,9 @@ rmse = function(y, ypred) {
 }
 
 qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
-qb
 qb = subset(qb, year <= 2008)
-qb
-qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
-qb
+qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
 qb = subset(qb, position== "QB")
-qb
 n = nrow(qb)
 n_train = round(0.8*n)  # round to nearest integer
 n_test = n - n_train
@@ -20,8 +16,6 @@ n_train = round(0.8*n)  # round to nearest integer
 n_test = n - n_train
 
 
-
-qb
 drops <- c('position')
 qb = qb[ , !(names(qb) %in% drops)]
 qb[qb==0] <- NA
@@ -37,7 +31,7 @@ qb$broad[is.na(qb$broad)] <- avgs["broad"]
 # Offensive Linemen: OT, OG, C
 
 # get best K value
-kframe_s <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
+qb_games_k_rmse <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
 i <- 3
 while(i <= 30){
   avg_cols = do(100)*{
@@ -60,22 +54,21 @@ while(i <= 30){
     knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
     c(rmse(ytest, knn_model$pred))
   }
-  d = data.frame("K" = i, "percentage" = mean(avg_cols[["result"]]))
-  kframe_s = rbind(kframe_s, d)
+  d = data.frame("K" = i, "RMEAN_AVERAGE" = mean(avg_cols[["result"]]))
+  qb_games_k_rmse = rbind(qb_games_k_rmse, d)
   i = i + 1
 }
 
 
-kmeanthing = ggplot(data = kframe_s) + 
-  geom_point(mapping = aes(x = K, y = percentage), color='lightgrey') + 
-  theme_bw(base_size=18) + geom_path(aes(x = K, y = percentage), color='red') + 
+qb_games_k_rmse_graph = ggplot(data = qb_games_k_rmse) + 
+  geom_point(mapping = aes(x = K, y = RMEAN_AVERAGE), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = RMEAN_AVERAGE), color='red') + 
   ylab("RMSE")
-kmeanthing
-kframe_s
 
 
 
-# K = 11 is the best
+
+# K = 6ish is the best
 train_cases = sample.int(n, n_train, replace=FALSE)
 test_cases = setdiff(1:n, train_cases)
 qb_train = qb[train_cases,]
@@ -92,23 +85,24 @@ Xtilde_test = scale(Xtest, scale = scale_train)
 
 head(Xtrain, 2)
 head(Xtilde_train, 2) %>% round(3)
-knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=11)
-rmse(ytest, knn_model$pred)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=6)
 qb_test$knn_games = as.integer(knn_model$pred) + 1
 qb_test$idu <- as.numeric(row.names(qb_test))
-knn_model$pred
-
-p_test = ggplot(data = qb_test) + 
+# scatter plot containing actual and predicted games_played. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 6
+qb_knn_games_started = ggplot(data = qb_test) + 
   geom_point(mapping = aes(x = idu, y = games_played), color='lightgrey') + 
-  theme_bw(base_size=18) 
-p_test + geom_point(aes(x = idu, y = games_played), color='lightgrey')
-p_test + geom_point(aes(x = idu, y = knn_games), color='red')
-qb$picktotal[qb$picktotal == 0] = 255
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='lightgrey') + geom_point(aes(x = idu, y = knn_games), color='red')
 
-picktotal_gamesplayed = ggplot(data = qb) + 
+qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
+qb = subset(qb, year <= 2008)
+qb = subset(qb, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+qb = subset(qb, position== "QB")
+qb$picktotal[qb$picktotal == 0] = 255
+qb_picktotal_gamesplayed = ggplot(data = qb) + 
   geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
   theme_bw(base_size=18) 
-picktotal_gamesplayed
+
 
 qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
 qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
@@ -117,23 +111,20 @@ drops <- c('position')
 qb = qb[ , !(names(qb) %in% drops)]
 qb[qb==0] <- NA
 
-fortyyd_picktotal = ggplot(data = qb) + 
+qb_fortyyd_picktotal = ggplot(data = qb) + 
   geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
   theme_bw(base_size=18) 
-fortyyd_picktotal
 
-twentyss_picktotal = ggplot(data = qb) + 
+qb_twentyss_picktotal = ggplot(data = qb) + 
   geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
   theme_bw(base_size=18) 
-twentyss_picktotal
 
-vertical_picktotal = ggplot(data = qb) + 
+qb_vertical_picktotal = ggplot(data = qb) + 
   geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
   theme_bw(base_size=18) 
-vertical_picktotal
 
-broad_picktotal = ggplot(data = qb) + 
+qb_broad_picktotal = ggplot(data = qb) + 
   geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
   theme_bw(base_size=18) 
-broad_picktotal
+
 
