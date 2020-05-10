@@ -94,7 +94,7 @@ qb_knn_games_started = ggplot(data = qb_test) +
   geom_point(mapping = aes(x = idu, y = games_played), color='lightgrey') + 
   theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='lightgrey') + geom_point(aes(x = idu, y = knn_games), color='red')
 
-qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
+qb = read.csv("Desktop/SDS_Project/data/qb_combined.csv")
 qb = subset(qb, year <= 2008)
 qb = subset(qb, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
 qb = subset(qb, position== "QB")
@@ -104,7 +104,8 @@ qb_picktotal_gamesplayed = ggplot(data = qb) +
   theme_bw(base_size=18) 
 
 
-qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
+
+qb = read.csv("Desktop/SDS_Project/data/qb_combined.csv")
 qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
 qb = subset(qb, position== "QB")
 drops <- c('position')

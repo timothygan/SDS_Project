@@ -92,7 +92,7 @@ wr_knn_games_started = ggplot(data = wr_test) +
 
 
 ## run this to get picktotal vs gamesplayed
-wr <- read.csv("Desktop/SDS_Project/data/wr_combined.csv")
+wr = read.csv("Desktop/SDS_Project/data/wr_combined.csv")
 wr = subset(wr, year <= 2008)
 wr = subset(wr, select=c("position","picktotal", "threecone",  "fortyyd", "twentyss", "vertical", "broad", "games_played"))
 wr = subset(wr, position== "WR")
@@ -100,10 +100,11 @@ wr$picktotal[wr$picktotal == 0] = 255
 wr_picktotal_gamesplayed = ggplot(data = wr) + 
   geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
   theme_bw(base_size=18) 
+wr_picktotal_gamesplayed
 ##
 
 ## pick total vs stats
-wr <- read.csv("Desktop/SDS_Project/data/wr_combined.csv")
+wr = read.csv("Desktop/SDS_Project/data/wr_combined.csv")
 wr = subset(wr, select=c("position", "threecone", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
 wr = subset(wr, position== "WR")
 drops <- c('position')

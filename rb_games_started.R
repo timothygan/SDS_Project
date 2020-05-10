@@ -94,9 +94,9 @@ rb_knn_games_started
 
 
 ## run this to get picktotal vs gamesplayed
-rb <- read.csv("Desktop/SDS_Project/data/rb_combined.csv")
+rb = read.csv("Desktop/SDS_Project/data/rb_combined.csv")
 rb = subset(rb, year <= 2008)
-rb = subset(rb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+rb = subset(rb, select=c("position", "fortyyd", "picktotal", "twentyss", "vertical", "broad", "games_played"))
 rb = subset(rb, position== "RB")
 rb$picktotal[rb$picktotal == 0] = 255
 rb_picktotal_gamesplayed = ggplot(data = rb) + 
@@ -104,8 +104,9 @@ rb_picktotal_gamesplayed = ggplot(data = rb) +
   theme_bw(base_size=18) 
 ##
 
+
 ## pick total vs stats
-rb <- read.csv("Desktop/SDS_Project/data/rb_combined.csv")
+rb = read.csv("Desktop/SDS_Project/data/rb_combined.csv")
 rb = subset(rb, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
 rb = subset(rb, position== "RB")
 drops <- c('position')

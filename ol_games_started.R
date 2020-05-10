@@ -96,7 +96,7 @@ ol_knn_games_started = ggplot(data = ol_test) +
   theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='lightgrey') + geom_point(aes(x = idu, y = knn_games), color='red')
 
 
-ol <- read.csv("Desktop/SDS_Project/data/ol_combined.csv")
+ol = read.csv("Desktop/SDS_Project/data/ol_combined.csv")
 ol = subset(ol, year <= 2008)
 ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
 ol = subset(ol, position == "OG" | position =="OT" | position=="C")
@@ -107,7 +107,7 @@ ol_picktotal_gamesplayed = ggplot(data = ol) +
 
 
 
-ol <- read.csv("Desktop/SDS_Project/data/ol_combined.csv")
+ol = read.csv("Desktop/SDS_Project/data/ol_combined.csv")
 ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
 ol = subset(ol, position == "OG" | position =="OT" | position=="C")
 drops <- c('position')
