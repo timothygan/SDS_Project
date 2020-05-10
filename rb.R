@@ -106,9 +106,40 @@ num_correct = rb_test$idu[rb_test$knn_round == rb_test$round]
 num_correct
 p_test = ggplot(data = rb_test) + 
   geom_point(mapping = aes(x = idu, y = round), color='lightgrey') + 
-  theme_bw(base_size=18) 
-p_test + geom_point(aes(x = idu, y = round), color='red')
-p_test + geom_point(aes(x = idu, y = knn_round), color='red')
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = knn_round), color='red')
+
+
+#compares with null value
+average_compare = do(100)*{
+  train_cases = sample.int(n, n_train, replace=FALSE)
+  test_cases = setdiff(1:n, train_cases)
+  rb_train = rb[train_cases,]
+  rb_test = rb[test_cases,]
+  Xtrain = model.matrix(~ . - picktotal - 1, data=rb_train)
+  Xtest = model.matrix(~ . - picktotal - 1, data=rb_test)
+  
+  ytrain = rb_train$picktotal
+  ytest = rb_test$picktotal
+  
+  scale_train = apply(Xtrain, 2, sd)
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)
+  
+  head(Xtrain, 2)
+  head(Xtilde_train, 2) %>% round(3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+  rb_test$knn = knn_model$pred
+  rb_test$knn_round = as.integer(knn_model$pred/51) + 1
+  rb_test$round = as.integer(rb_test$picktotal/51) + 1
+  rb_test$rand = sample(1:5, size = nrow(rb_test), replace = TRUE)
+  rb_test$rand
+  rb_test$idu <- as.numeric(row.names(rb_test))
+  num_correct = rb_test$idu[rb_test$knn_round == rb_test$round]
+  rand_correct = rb_test$idu[rb_test$rand == rb_test$round]
+  c(NROW(num_correct)/NROW(rb_test),
+    NROW(rand_correct)/NROW(rb_test))
+}
+colMeans(average_compare)
 
 
 

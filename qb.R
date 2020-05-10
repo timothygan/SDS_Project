@@ -109,3 +109,36 @@ p_test = ggplot(data = qb_test) +
 p_test + geom_point(aes(x = idu, y = round), color='red')
 p_test + geom_point(aes(x = idu, y = knn_round), color='red')
 
+
+#3 without a doubt the best cause ti just falls off very quickly after that
+average_compare = do(100)*{
+  train_cases = sample.int(n, n_train, replace=FALSE)
+  test_cases = setdiff(1:n, train_cases)
+  qb_train = qb[train_cases,]
+  qb_test = qb[test_cases,]
+  Xtrain = model.matrix(~ . - picktotal - 1, data=qb_train)
+  Xtest = model.matrix(~ . - picktotal - 1, data=qb_test)
+  
+  ytrain = qb_train$picktotal
+  ytest = qb_test$picktotal
+  
+  scale_train = apply(Xtrain, 2, sd)
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)
+  
+  head(Xtrain, 2)
+  head(Xtilde_train, 2) %>% round(3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+  qb_test$knn = knn_model$pred
+  qb_test$knn_round = as.integer(knn_model$pred/51) + 1
+  qb_test$round = as.integer(qb_test$picktotal/51) + 1
+  qb_test$rand = sample(1:5, size = nrow(qb_test), replace = TRUE)
+  qb_test$rand
+  qb_test$idu <- as.numeric(row.names(qb_test))
+  num_correct = qb_test$idu[qb_test$knn_round == qb_test$round]
+  rand_correct = qb_test$idu[qb_test$rand == qb_test$round]
+  c(NROW(num_correct)/NROW(qb_test),
+    NROW(rand_correct)/NROW(qb_test))
+}
+colMeans(average_compare)
+
