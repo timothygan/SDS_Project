@@ -128,7 +128,7 @@ average_compare = do(100)*{
   
   head(Xtrain, 2)
   head(Xtilde_train, 2) %>% round(3)
-  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=)
   ol_test$knn = knn_model$pred
   ol_test$knn_round = as.integer(knn_model$pred/51) + 1
   ol_test$round = as.integer(ol_test$picktotal/51) + 1

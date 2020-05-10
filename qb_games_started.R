@@ -9,7 +9,7 @@ qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
 qb
 qb = subset(qb, year <= 2008)
 qb
-qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
 qb
 qb = subset(qb, position== "QB")
 qb
@@ -103,4 +103,37 @@ p_test = ggplot(data = qb_test) +
   theme_bw(base_size=18) 
 p_test + geom_point(aes(x = idu, y = games_played), color='lightgrey')
 p_test + geom_point(aes(x = idu, y = knn_games), color='red')
+qb$picktotal[qb$picktotal == 0] = 255
+
+picktotal_gamesplayed = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18) 
+picktotal_gamesplayed
+
+qb <- read.csv("Desktop/SDS_Project/data/qb_combined.csv")
+qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
+qb = subset(qb, position== "QB")
+drops <- c('position')
+qb = qb[ , !(names(qb) %in% drops)]
+qb[qb==0] <- NA
+
+fortyyd_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+fortyyd_picktotal
+
+twentyss_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+twentyss_picktotal
+
+vertical_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+vertical_picktotal
+
+broad_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+broad_picktotal
 

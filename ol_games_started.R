@@ -9,7 +9,7 @@ ol <- read.csv("Desktop/SDS_Project/data/ol_combined.csv")
 ol
 ol = subset(ol, year <= 2008)
 ol
-ol = subset(ol, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
+ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
 ol
 ol = subset(ol, position == "OG" | position =="OT" | position=="C")
 ol
@@ -103,4 +103,41 @@ p_test = ggplot(data = ol_test) +
   theme_bw(base_size=18) 
 p_test + geom_point(aes(x = idu, y = games_played), color='lightgrey')
 p_test + geom_point(aes(x = idu, y = knn_games), color='red')
+ol$picktotal[ol$picktotal == 0] = 255
 
+picktotal_gamesplayed = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18) 
+picktotal_gamesplayed
+
+
+ol <- read.csv("Desktop/SDS_Project/data/ol_combined.csv")
+ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
+ol = subset(ol, position == "OG" | position =="OT" | position=="C")
+drops <- c('position')
+ol = ol[ , !(names(ol) %in% drops)]
+ol[ol==0] <- NA
+fortyyd_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+fortyyd_picktotal
+
+twentyss_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+twentyss_picktotal
+
+vertical_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+vertical_picktotal
+
+broad_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+broad_picktotal
+
+bench_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = bench, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+bench_picktotal
