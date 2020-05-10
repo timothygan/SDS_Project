@@ -20,12 +20,12 @@ of
 drops <- c('position')
 of = of[ , !(names(of) %in% drops)]
 of[of==0] <- NA
-colMeans(of, na.rm=TRUE)
-of$fortyyd[is.na(of$fortyyd)] <- 5.239700 
-of$twentyss[is.na(of$twentyss)] <- 4.720045
-of$vertical[is.na(of$vertical)] <- 28.248954
-of$broad[is.na(of$broad)] <- 102.345133
-of$bench[is.na(of$bench)] <- 26.146444
+avgs = colMeans(of, na.rm=TRUE)
+of$fortyyd[is.na(of$fortyyd)] <- avgs["fortyyd"] 
+of$twentyss[is.na(of$twentyss)] <- avgs["twentyss"]
+of$vertical[is.na(of$vertical)] <- avgs["vertical"]
+of$broad[is.na(of$broad)] <- avgs["broad"]
+of$bench[is.na(of$bench)] <- avgs["bench"]
 
 # WR
 # RB
