@@ -147,22 +147,22 @@ model(V2). These values are averaged over 100 runs to reduce variance.
     ## [1] "Quarterbacks:"
 
     ##        V1        V2 
-    ## 0.2704762 0.2085714
+    ## 0.2947619 0.2061905
 
     ## [1] "Wide Receivers:"
 
     ##        V1        V2 
-    ## 0.2218750 0.1972917
+    ## 0.2162500 0.1983333
 
     ## [1] "Running Backs:"
 
     ##        V1        V2 
-    ## 0.2703448 0.2144828
+    ## 0.2737931 0.2044828
 
     ## [1] "Offensive Linemen:"
 
     ##        V1        V2 
-    ## 0.2105455 0.1910909
+    ## 0.2192727 0.2040000
 
 Here the models for quarterbacks and running backs consistently perform
 much better than the models for wide receivers and offensive linemen.
@@ -211,7 +211,7 @@ tend to be concentrated in the first few rounds due to being one of the
 highest valued positions, and our model is able to learn this.
 
 Unsurpisingly, the games started models do even worse. The most obvious
-reason for this is that there is an extra layer between The combine and
+reason for this is that there is an extra layer between the combine and
 a player’s NFL career. The models do best at predicting players that
 play around 0-75 games or so. This is likely due to the fact that as a
 player’s number of games played goes up, they are increasingly likely to
