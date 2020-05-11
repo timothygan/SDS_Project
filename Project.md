@@ -13,7 +13,7 @@ in predicting draft position, especially at the Quarterback and Running
 back positions. However, our models for predicting NFL success in the
 way of games played make predictions that have almost no correlation
 with actual results. We conclude that, due to a shown correlation
-between draft position and nfl success and a correlation between
+between draft position and NFL success and a correlation between
 performance in certain combine events and draft position, that it is
 worth exploring more sophisticated models in making these predictions.
 
@@ -29,15 +29,15 @@ performance. However, it is becoming an increasingly popular opinion
 that too much weight is placed on Combine results as they do not
 accurately reflect real football situations. For instance, players will
 almost never sprint 40 yards in a straight line in an NFL game. Our goal
-is to determine to what extent it is possible to build statistcal models
-that predict the draft position and overall carreer success of players
-based solely on their combine data. It’s obvious why a model that
-predicts player success would be useful, coaches and general managers
-can use this information to decide who to pick. The application of a
-draft position predictor is less obvious. However, if it is accurate
-enough, general managers could use this information to guide their draft
-strategy by letting them know which players are likely to be available
-at which rounds.
+is to determine to what extent it is possible to build statistical
+models that predict the draft position and overall carreer success of
+players based solely on their combine data. It’s obvious why a model
+that predicts player success would be useful, coaches and general
+managers can use this information to decide who to pick. The application
+of a draft position predictor is less obvious. However, if it is
+accurate enough, general managers could use this information to guide
+their draft strategy by letting them know which players are likely to be
+available at which rounds.
 
 ## Methods
 
@@ -107,11 +107,10 @@ There are many missing values for combine event results. We decided to
 not consider any events where the majority of players in a given
 position group did not participate in. For example, in the quarterback
 model, we did not include the 3 cone drill because the vast majority of
-QB’s did not participate, but we did include the 3 cone drill in the
-models for the other three position groups. We figure that players are
-naturally going decide to participate in the events considered most
-important to their position, so this is a good natural filter for which
-events to include.
+QB’s did not participate, but we did include the 3 cone drill in WR
+model. We figure that players are naturally going decide to participate
+in the events considered most important to their position, so this is a
+good natural filter for which events to include.
 
 We trained the models with overall pick number as the target variable.
 To evaluate the success of the models, we divided the draft into 5 equal
@@ -148,22 +147,22 @@ model(V2). These values are averaged over 100 runs to reduce variance.
     ## [1] "Quarterbacks:"
 
     ##        V1        V2 
-    ## 0.2857143 0.2038095
+    ## 0.2704762 0.2085714
 
     ## [1] "Wide Receivers:"
 
     ##        V1        V2 
-    ## 0.2250000 0.2016667
+    ## 0.2218750 0.1972917
 
     ## [1] "Running Backs:"
 
     ##        V1        V2 
-    ## 0.2675862 0.1982759
+    ## 0.2703448 0.2144828
 
     ## [1] "Offensive Linemen:"
 
     ##        V1        V2 
-    ## 0.2216364 0.2038182
+    ## 0.2105455 0.1910909
 
 Here the models for quarterbacks and running backs consistently perform
 much better than the models for wide receivers and offensive linemen.
@@ -239,7 +238,8 @@ NFL success based on combine data.
 
 ### Figure 1: Draft position plotted against games started by position
 
-Top left: QB, Top right: WR, Bottom Left: RB, Bottom Right: OL
+Top left: QB, Top right: WR, Bottom Left: RB, Bottom Right:
+OL
 
 <img src="Project_files/figure-gfm/appendix_1-1.png" width="50%" /><img src="Project_files/figure-gfm/appendix_1-2.png" width="50%" /><img src="Project_files/figure-gfm/appendix_1-3.png" width="50%" /><img src="Project_files/figure-gfm/appendix_1-4.png" width="50%" />
 
@@ -247,6 +247,7 @@ Top left: QB, Top right: WR, Bottom Left: RB, Bottom Right: OL
 
 Left: Wide Receiver, Right: Runningback
 
+Note that a smaller forty yard dash time is better than a larger one.
 <img src="Project_files/figure-gfm/appendix_2-1.png" width="50%" /><img src="Project_files/figure-gfm/appendix_2-2.png" width="50%" />
 
 ### Figure 3: Offensive line Bench Press plotted against draft position
