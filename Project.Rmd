@@ -1,21 +1,1092 @@
 ---
-title: "SDS323_Project"
+title: "Predicting draft results and NFL success based on NFL Scouting combine data"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup_qb, include=FALSE}
+library(tidyverse)
+library(mosaic)
+library(FNN)
 knitr::opts_chunk$set(echo = TRUE)
+qb <- read.csv("data/qb.csv")
+wr <- read.csv("data/wr.csv")
+rb <- read.csv("data/rb.csv")
+ol <- read.csv("data/of.csv")
+
+################  QB   #################
+
+## Draft position
+rmse = function(y, ypred) {
+  sqrt(mean(data.matrix((y-ypred)^2)))
+}
+
+n = nrow(qb)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+
+drops <- c('position')
+qb = qb[ , !(names(qb) %in% drops)]
+qb[qb==0] <- NA
+avgs = colMeans(qb, na.rm=TRUE)
+qb$fortyyd[is.na(qb$fortyyd)] <- avgs["fortyyd"]
+qb$twentyss[is.na(qb$twentyss)] <- avgs["twentyss"]
+qb$vertical[is.na(qb$vertical)] <- avgs["vertical"]
+qb$broad[is.na(qb$broad)] <- avgs["broad"]
+
+# WR
+# RB
+# QB
+# Offensive Linemen: OT, OG, C
+
+# get best K value
+qb_k_percentages <- data.frame("K" = c(), "percentage" =c())
+i <- 3
+while(i <= 50){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    qb_train = qb[train_cases,]
+    qb_test = qb[test_cases,]
+    Xtrain = model.matrix(~ . - picktotal - 1, data=qb_train)
+    Xtest = model.matrix(~ . - picktotal - 1, data=qb_test)
+    
+    ytrain = qb_train$picktotal
+    ytest = qb_test$picktotal
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    knn_model$pred
+    rmse(ytest, knn_model$pred)
+    
+    qb_test$knn_round = as.integer(knn_model$pred/51) + 1
+    qb_test$round = as.integer(qb_test$picktotal/51) + 1
+    qb_test$idu <- as.numeric(row.names(qb_test))
+    num_correct = qb_test$idu[qb_test$knn_round == qb_test$round]
+    c(NROW(num_correct)/NROW(qb_test))
+  }
+  d = data.frame("K" = i, "percentage" = mean(avg_cols[["result"]]))
+  qb_k_percentages = rbind(qb_k_percentages, d)
+  i = i + 1
+}
+
+# graph of percentage correct per K value
+qb_k_percentages_graph = ggplot(data = qb_k_percentages) + 
+  geom_point(mapping = aes(x = K, y = percentage), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = percentage), color='red') + 
+  ylab("Guessed Round Correctly (%)")
+
+
+
+
+# K = 3 is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+qb_train = qb[train_cases,]
+qb_test = qb[test_cases,]
+Xtrain = model.matrix(~ . - picktotal - 1, data=qb_train)
+Xtest = model.matrix(~ . - picktotal - 1, data=qb_test)
+
+ytrain = qb_train$picktotal
+ytest = qb_test$picktotal
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+
+rmse(ytest, knn_model$pred)
+qb_test$knn = knn_model$pred
+qb_test$knn_round = as.integer(knn_model$pred/51) + 1
+qb_test$round = as.integer(qb_test$picktotal/51) + 1
+qb_test$idu <- as.numeric(row.names(qb_test))
+num_correct = qb_test$idu[qb_test$knn_round == qb_test$round]
+
+# scatter plot containing actual and predicted draft round. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 3
+qb_k_3 = ggplot(data = qb_test) + 
+  geom_point(mapping = aes(x = idu, y = round), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = round), color='red') + geom_point(aes(x = idu, y = knn_round), color='red')
+
+
+#3 without a doubt the best cause ti just falls off very quickly after that
+average_compare = do(100)*{
+  train_cases = sample.int(n, n_train, replace=FALSE)
+  test_cases = setdiff(1:n, train_cases)
+  qb_train = qb[train_cases,]
+  qb_test = qb[test_cases,]
+  Xtrain = model.matrix(~ . - picktotal - 1, data=qb_train)
+  Xtest = model.matrix(~ . - picktotal - 1, data=qb_test)
+  
+  ytrain = qb_train$picktotal
+  ytest = qb_test$picktotal
+  
+  scale_train = apply(Xtrain, 2, sd)
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)
+  
+  head(Xtrain, 2)
+  head(Xtilde_train, 2) %>% round(3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+  qb_test$knn = knn_model$pred
+  qb_test$knn_round = as.integer(knn_model$pred/51) + 1
+  qb_test$round = as.integer(qb_test$picktotal/51) + 1
+  qb_test$rand = sample(1:5, size = nrow(qb_test), replace = TRUE)
+  qb_test$rand
+  qb_test$idu <- as.numeric(row.names(qb_test))
+  num_correct = qb_test$idu[qb_test$knn_round == qb_test$round]
+  rand_correct = qb_test$idu[qb_test$rand == qb_test$round]
+  c(NROW(num_correct)/NROW(qb_test),
+    NROW(rand_correct)/NROW(qb_test))
+}
+# print this out to show comparison between our model and null model over 100 runs
+qb_correct = colMeans(average_compare)
+
+## Games Started
+qb <- read.csv("data/qb_combined.csv")
+qb = subset(qb, year <= 2008)
+qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+qb = subset(qb, position== "QB")
+n = nrow(qb)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+drops <- c('position')
+qb = qb[ , !(names(qb) %in% drops)]
+qb[qb==0] <- NA
+avgs = colMeans(qb, na.rm=TRUE)
+qb$fortyyd[is.na(qb$fortyyd)] <- avgs["fortyyd"]
+qb$twentyss[is.na(qb$twentyss)] <- avgs["twentyss"]
+qb$vertical[is.na(qb$vertical)] <- avgs["vertical"]
+qb$broad[is.na(qb$broad)] <- avgs["broad"]
+
+# get best K value
+qb_games_k_rmse <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
+i <- 3
+while(i <= 30){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    qb_train = qb[train_cases,]
+    qb_test = qb[test_cases,]
+    Xtrain = model.matrix(~ . - games_played - 1, data=qb_train)
+    Xtest = model.matrix(~ . - games_played - 1, data=qb_test)
+    
+    ytrain = qb_train$games_played
+    ytest = qb_test$games_played
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    c(rmse(ytest, knn_model$pred))
+  }
+  d = data.frame("K" = i, "RMEAN_AVERAGE" = mean(avg_cols[["result"]]))
+  qb_games_k_rmse = rbind(qb_games_k_rmse, d)
+  i = i + 1
+}
+
+
+qb_games_k_rmse_graph = ggplot(data = qb_games_k_rmse) + 
+  geom_point(mapping = aes(x = K, y = RMEAN_AVERAGE), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = RMEAN_AVERAGE), color='red') + 
+  ylab("RMSE")
+
+
+
+
+# K = 6ish is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+qb_train = qb[train_cases,]
+qb_test = qb[test_cases,]
+Xtrain = model.matrix(~ . - games_played - 1, data=qb_train)
+Xtest = model.matrix(~ . - games_played - 1, data=qb_test)
+
+ytrain = qb_train$games_played
+ytest = qb_test$games_played
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=6)
+qb_test$knn_games = as.integer(knn_model$pred) + 1
+qb_test = qb_test[order(qb_test$games_played),]
+row.names(qb_test) <- NULL
+qb_test$idu <- as.numeric(row.names(qb_test))
+# scatter plot containing actual and predicted games_played. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 6
+qb_knn_games_started = ggplot(data = qb_test) + 
+  geom_point(mapping = aes(x = idu, y = games_played), color='blue') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='blue') + geom_point(aes(x = idu, y = knn_games), color='red')
+
+qb <- read.csv("data/qb_combined.csv")
+qb = subset(qb, year <= 2008)
+qb = subset(qb, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+qb = subset(qb, position== "QB")
+qb$picktotal[qb$picktotal == 0] = 255
+qb_picktotal_gamesplayed = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18) 
+
+
+qb <- read.csv("data/qb_combined.csv")
+qb = subset(qb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "picktotal", "games_played"))
+qb = subset(qb, position== "QB")
+drops <- c('position')
+qb = qb[ , !(names(qb) %in% drops)]
+qb[qb==0] <- NA
+
+## Figures
+qb_fortyyd_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+qb_fortyyd_picktotal
+qb_twentyss_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+qb_vertical_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+qb_broad_picktotal = ggplot(data = qb) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+```
+
+```{r setup_wr, include=FALSE}
+################ WR ##################
+## Draft position 
+library(tidyverse)
+library(mosaic)
+library(FNN)
+wr <- read.csv("data/wr.csv")
+n = nrow(wr)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+drops <- c('position')
+wr = wr[ , !(names(wr) %in% drops)]
+wr[wr==0] <- NA
+avgs = colMeans(wr, na.rm=TRUE)
+wr$fortyyd[is.na(wr$fortyyd)] <- avgs["fortyyd"]
+wr$twentyss[is.na(wr$twentyss)] <- avgs["twentyss"]
+wr$vertical[is.na(wr$vertical)] <- avgs["vertical"]
+wr$broad[is.na(wr$broad)] <- avgs["broad"]
+wr$threecone[is.na(wr$threecone)] <- avgs["threecone"]
+
+# get best K value
+
+wr_k_percentages <- data.frame("K" = c(), "percentage" =c())
+i <- 3
+while(i <= 50){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    wr_train = wr[train_cases,]
+    wr_test = wr[test_cases,]
+    Xtrain = model.matrix(~ . - picktotal - 1, data=wr_train)
+    Xtest = model.matrix(~ . - picktotal - 1, data=wr_test)
+    
+    ytrain = wr_train$picktotal
+    ytest = wr_test$picktotal
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    knn_model$pred
+    rmse(ytest, knn_model$pred)
+    
+    wr_test$knn_round = as.integer(knn_model$pred/51) + 1
+    wr_test$round = as.integer(wr_test$picktotal/51) + 1
+    wr_test$idu <- as.numeric(row.names(wr_test))
+    num_correct = wr_test$idu[wr_test$knn_round == wr_test$round]
+    c(NROW(num_correct)/NROW(wr_test))
+  }
+  d = data.frame("K" = i, "percentage" = mean(avg_cols[["result"]]))
+  wr_k_percentages = rbind(wr_k_percentages, d)
+  i = i + 1
+  
+}
+
+# graph of percentage correct per K value
+wr_k_percentages_graph = ggplot(data = wr_k_percentages) + 
+  geom_point(mapping = aes(x = K, y = percentage), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = percentage), color='red') + 
+  ylab("Guessed Round Correctly (%)")
+
+wr_k_percentages_graph
+
+
+# K = 4 is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+wr_train = wr[train_cases,]
+wr_test = wr[test_cases,]
+Xtrain = model.matrix(~ . - picktotal - 1, data=wr_train)
+Xtest = model.matrix(~ . - picktotal - 1, data=wr_test)
+
+ytrain = wr_train$picktotal
+ytest = wr_test$picktotal
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=4)
+wr_test$knn = knn_model$pred
+wr_test$knn_round = as.integer(knn_model$pred/51) + 1
+wr_test$round = as.integer(wr_test$picktotal/51) + 1
+wr_test$rand = sample(1:5, size = nrow(wr_test), replace = TRUE)
+wr_test$idu <- as.numeric(row.names(wr_test))
+
+# scatter plot containing actual and predicted draft round. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 4
+wr_k_4 = ggplot(data = wr_test) + 
+  geom_point(mapping = aes(x = idu, y = round), color='lightgrey') + 
+  theme_bw(base_size=18)  + geom_point(aes(x = idu, y = knn_round), color='red')
+wr_k_4
+
+#p_test = p_test + geom_point(aes(x = idu, y = rand), color='blue')
+#p_test
+
+#compares with null value
+  average_compare = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    wr_train = wr[train_cases,]
+    wr_test = wr[test_cases,]
+    Xtrain = model.matrix(~ . - picktotal - 1, data=wr_train)
+    Xtest = model.matrix(~ . - picktotal - 1, data=wr_test)
+    
+    ytrain = wr_train$picktotal
+    ytest = wr_test$picktotal
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=4)
+    wr_test$knn = knn_model$pred
+    wr_test$knn_round = as.integer(knn_model$pred/51) + 1
+    wr_test$round = as.integer(wr_test$picktotal/51) + 1
+    wr_test$rand = sample(1:5, size = nrow(wr_test), replace = TRUE)
+    wr_test$rand
+    wr_test$idu <- as.numeric(row.names(wr_test))
+    num_correct = wr_test$idu[wr_test$knn_round == wr_test$round]
+    rand_correct = wr_test$idu[wr_test$rand == wr_test$round]
+    c(NROW(num_correct)/NROW(wr_test),
+      NROW(rand_correct)/NROW(wr_test))
+  }
+# print this out to show comparison between our model and null model over 100 runs
+  
+wr_correct = colMeans(average_compare)
+
+## NFL Sucess
+wr <- read.csv("data/wr_combined.csv")
+wr = subset(wr, year <= 2008)
+wr = subset(wr, select=c("position", "threecone",  "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+wr = subset(wr, position== "WR")
+n = nrow(wr)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+drops <- c('position')
+wr = wr[ , !(names(wr) %in% drops)]
+wr[wr==0] <- NA
+avgs = colMeans(wr, na.rm=TRUE)
+wr$fortyyd[is.na(wr$fortyyd)] <- avgs["fortyyd"]
+wr$twentyss[is.na(wr$twentyss)] <- avgs["twentyss"]
+wr$vertical[is.na(wr$vertical)] <- avgs["vertical"]
+wr$broad[is.na(wr$broad)] <- avgs["broad"]
+wr$threecone[is.na(wr$threecone)] <- avgs["threecone"]
+
+
+# WR
+# RB
+# QB
+# Offensive Linemen: OT, OG, C
+
+# get best K value
+wr_games_k_rmse <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
+i <- 3
+while(i <= 30){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    wr_train = wr[train_cases,]
+    wr_test = wr[test_cases,]
+    Xtrain = model.matrix(~ . - games_played - 1, data=wr_train)
+    Xtest = model.matrix(~ . - games_played - 1, data=wr_test)
+    
+    ytrain = wr_train$games_played
+    ytest = wr_test$games_played
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    c(rmse(ytest, knn_model$pred))
+  }
+  d = data.frame("K" = i, "RMEAN_AVERAGE" = mean(avg_cols[["result"]]))
+  wr_games_k_rmse = rbind(wr_games_k_rmse, d)
+  i = i + 1
+}
+
+# graph of RMSE vs K value
+wr_games_k_rmse_graph = ggplot(data = wr_games_k_rmse) + 
+  geom_point(mapping = aes(x = K, y = RMEAN_AVERAGE), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = RMEAN_AVERAGE), color='red') + 
+  ylab("RMSE")
+
+
+
+
+# K = 8 is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+wr_train = wr[train_cases,]
+wr_test = wr[test_cases,]
+Xtrain = model.matrix(~ . - games_played - 1, data=wr_train)
+Xtest = model.matrix(~ . - games_played - 1, data=wr_test)
+ytrain = wr_train$games_played
+ytest = wr_test$games_played
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=8)
+wr_test$knn_games = as.integer(knn_model$pred) + 1
+wr_test = wr_test[order(wr_test$games_played),]
+row.names(wr_test) <- NULL
+wr_test = wr_test[order(wr_test$games_played),]
+row.names(wr_test)
+wr_test$idu <- as.numeric(row.names(wr_test))
+# scatter plot containing actual and predicted games_played. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 8
+wr_knn_games_started = ggplot(data = wr_test) + 
+  geom_point(mapping = aes(x = idu, y = games_played), color='blue') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='blue') + geom_point(aes(x = idu, y = knn_games), color='red')
+
+
+## run this to get picktotal vs gamesplayed
+wr <- read.csv("data/wr_combined.csv")
+wr = subset(wr, year <= 2008)
+wr = subset(wr, select=c("position","picktotal", "threecone",  "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+wr = subset(wr, position== "WR")
+wr$picktotal[wr$picktotal == 0] = 255
+wr_picktotal_gamesplayed = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18) 
+
+
+## Figures
+## pick total vs stats
+wr <- read.csv("data/wr_combined.csv")
+wr = subset(wr, select=c("position", "threecone", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+wr = subset(wr, position== "WR")
+drops <- c('position')
+wr = wr[ , !(names(wr) %in% drops)]
+wr[wr==0] <- NA
+
+wr_fortyyd_picktotal = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+wr_twentyss_picktotal = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+wr_vertical_picktotal = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+wr_broad_picktotal = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+wr_threecone_picktotal = ggplot(data = wr) + 
+  geom_point(mapping = aes(x = threecone, y = picktotal), color='red') + 
+  theme_bw(base_size=18)
+```
+
+```{r setup_rb, include=FALSE}
+############## RB ###############
+## Draft Position
+library(tidyverse)
+library(mosaic)
+library(FNN)
+rmse = function(y, ypred) {
+  sqrt(mean(data.matrix((y-ypred)^2)))
+}
+rb <- read.csv("data/rb.csv")
+
+
+n = nrow(rb)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+drops <- c('position')
+rb = rb[ , !(names(rb) %in% drops)]
+rb[rb==0] <- NA
+avgs = colMeans(rb, na.rm=TRUE)
+rb$fortyyd[is.na(rb$fortyyd)] <- avgs["fortyyd"]
+rb$twentyss[is.na(rb$twentyss)] <- avgs["twentyss"]
+rb$vertical[is.na(rb$vertical)] <- avgs["vertical"]
+rb$broad[is.na(rb$broad)] <- avgs["broad"]
+
+# WR
+# RB
+# rb
+# Offensive Linemen: OT, OG, C
+
+# get best K value
+rb_k_percentages <- data.frame("K" = c(), "percentage" =c())
+i <- 3
+while(i <= 50){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    rb_train = rb[train_cases,]
+    rb_test = rb[test_cases,]
+    Xtrain = model.matrix(~ . - picktotal - 1, data=rb_train)
+    Xtest = model.matrix(~ . - picktotal - 1, data=rb_test)
+    
+    ytrain = rb_train$picktotal
+    ytest = rb_test$picktotal
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    knn_model$pred
+    rmse(ytest, knn_model$pred)
+    
+    rb_test$knn_round = as.integer(knn_model$pred/51) + 1
+    rb_test$round = as.integer(rb_test$picktotal/51) + 1
+    rb_test$idu <- as.numeric(row.names(rb_test))
+    num_correct = rb_test$idu[rb_test$knn_round == rb_test$round]
+    c(NROW(num_correct)/NROW(rb_test))
+  }
+  d = data.frame("K" = i, "percentage" = mean(avg_cols[["result"]]))
+  rb_k_percentages = rbind(rb_k_percentages, d)
+  i = i + 1
+  
+}
+
+# graph of percentage correct per K value
+rb_k_percentages_graph = ggplot(data = rb_k_percentages) + 
+  geom_point(mapping = aes(x = K, y = percentage), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = percentage), color='red') + 
+  ylab("Guessed Round Correctly (%)")
+
+rb_k_percentages_graph
+
+
+# K = 5ish is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+rb_train = rb[train_cases,]
+rb_test = rb[test_cases,]
+Xtrain = model.matrix(~ . - picktotal - 1, data=rb_train)
+Xtest = model.matrix(~ . - picktotal - 1, data=rb_test)
+
+ytrain = rb_train$picktotal
+ytest = rb_test$picktotal
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=5)
+rmse(ytest, knn_model$pred)
+rb_test$knn = knn_model$pred
+rb_test$knn_round = as.integer(knn_model$pred/51) + 1
+rb_test$round = as.integer(rb_test$picktotal/51) + 1
+rb_test$idu <- as.numeric(row.names(rb_test))
+num_correct = rb_test$idu[rb_test$knn_round == rb_test$round]
+# scatter plot containing actual and predicted draft round. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 5
+rb_k_5 = ggplot(data = rb_test) + 
+  geom_point(mapping = aes(x = idu, y = round), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = knn_round), color='red')
+
+
+#compares with null value
+average_compare = do(100)*{
+  train_cases = sample.int(n, n_train, replace=FALSE)
+  test_cases = setdiff(1:n, train_cases)
+  rb_train = rb[train_cases,]
+  rb_test = rb[test_cases,]
+  Xtrain = model.matrix(~ . - picktotal - 1, data=rb_train)
+  Xtest = model.matrix(~ . - picktotal - 1, data=rb_test)
+  
+  ytrain = rb_train$picktotal
+  ytest = rb_test$picktotal
+  
+  scale_train = apply(Xtrain, 2, sd)
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)
+  
+  head(Xtrain, 2)
+  head(Xtilde_train, 2) %>% round(3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=5)
+  rb_test$knn = knn_model$pred
+  rb_test$knn_round = as.integer(knn_model$pred/51) + 1
+  rb_test$round = as.integer(rb_test$picktotal/51) + 1
+  rb_test$rand = sample(1:5, size = nrow(rb_test), replace = TRUE)
+  rb_test$rand
+  rb_test$idu <- as.numeric(row.names(rb_test))
+  num_correct = rb_test$idu[rb_test$knn_round == rb_test$round]
+  rand_correct = rb_test$idu[rb_test$rand == rb_test$round]
+  c(NROW(num_correct)/NROW(rb_test),
+    NROW(rand_correct)/NROW(rb_test))
+}
+# print this out to show comparison between our model and null model over 100 runs
+rb_correct = colMeans(average_compare)
+## Games Started
+rb <- read.csv("data/rb_combined.csv")
+rb = subset(rb, year <= 2008)
+rb = subset(rb, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+rb = subset(rb, position== "RB")
+n = nrow(rb)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+drops <- c('position')
+rb = rb[ , !(names(rb) %in% drops)]
+rb[rb==0] <- NA
+avgs = colMeans(rb, na.rm=TRUE)
+rb$fortyyd[is.na(rb$fortyyd)] <- avgs["fortyyd"]
+rb$twentyss[is.na(rb$twentyss)] <- avgs["twentyss"]
+rb$vertical[is.na(rb$vertical)] <- avgs["vertical"]
+rb$broad[is.na(rb$broad)] <- avgs["broad"]
+
+# get best K value
+rb_games_k_rmse <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
+i <- 3
+while(i <= 30){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    rb_train = rb[train_cases,]
+    rb_test = rb[test_cases,]
+    Xtrain = model.matrix(~ .  - games_played - 1, data=rb_train)
+    Xtest = model.matrix(~ .  -  games_played - 1, data=rb_test)
+    
+    ytrain = rb_train$games_played
+    ytest = rb_test$games_played
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    c(rmse(ytest, knn_model$pred))
+  }
+  d = data.frame("K" = i, "RMEAN_AVERAGE" = mean(avg_cols[["result"]]))
+  rb_games_k_rmse = rbind(rb_games_k_rmse, d)
+  i = i + 1
+}
+
+# graph of RMSE vs K value
+rb_games_k_rmse_graph = ggplot(data = rb_games_k_rmse) + 
+  geom_point(mapping = aes(x = K, y = RMEAN_AVERAGE), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = RMEAN_AVERAGE), color='red') + 
+  ylab("RMSE")
+rb_games_k_rmse_graph
+
+
+
+
+# K = 7ish is best cause doesn't consider too many neighbors but is pretty low
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+rb_train = rb[train_cases,]
+rb_test = rb[test_cases,]
+Xtrain = model.matrix(~ .  - games_played - 1, data=rb_train)
+Xtest = model.matrix(~ . - games_played  - 1, data=rb_test)
+ytrain = rb_train$games_played
+ytest = rb_test$games_played
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=7)
+rb_test$knn_games = as.integer(knn_model$pred) + 1
+rb_test = rb_test[order(rb_test$games_played),]
+row.names(rb_test) <- NULL
+rb_test$idu <- as.numeric(row.names(rb_test))
+# scatter plot containing actual and predicted games_played. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 7
+rb_knn_games_started = ggplot(data = rb_test) + 
+  geom_point(mapping = aes(x = idu, y = games_played), color='blue') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='blue') + geom_point(aes(x = idu, y = knn_games), color='red')
+rb_knn_games_started
+
+
+
+## run this to get picktotal vs gamesplayed
+rb = read.csv("data/rb_combined.csv")
+rb = subset(rb, year <= 2008)
+rb = subset(rb, select=c("position", "fortyyd", "picktotal", "twentyss", "vertical", "broad", "games_played"))
+rb = subset(rb, position== "RB")
+rb$picktotal[rb$picktotal == 0] = 255
+rb_picktotal_gamesplayed = ggplot(data = rb) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18) 
+##
+
+
+## pick total vs stats
+rb = read.csv("data/rb_combined.csv")
+rb = subset(rb, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "games_played"))
+rb = subset(rb, position== "RB")
+drops <- c('position')
+rb = rb[ , !(names(rb) %in% drops)]
+rb[rb==0] <- NA
+
+rb_fortyyd_picktotal = ggplot(data = rb) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+
+rb_twentyss_picktotal = ggplot(data = rb) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+
+rb_vertical_picktotal = ggplot(data = rb) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+rb_broad_picktotal = ggplot(data = rb) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18)  
+```
+
+```{r setup_ol, include=FALSE}
+################# OL #################
+
+## Draft position
+library(tidyverse)
+library(mosaic)
+library(FNN)
+ol <- read.csv("data/of.csv")
+n = nrow(ol)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+drops <- c('position')
+ol = ol[ , !(names(ol) %in% drops)]
+ol[ol==0] <- NA
+avgs = colMeans(ol, na.rm=TRUE)
+ol$fortyyd[is.na(ol$fortyyd)] <- avgs["fortyyd"] 
+ol$twentyss[is.na(ol$twentyss)] <- avgs["twentyss"]
+ol$vertical[is.na(ol$vertical)] <- avgs["vertical"]
+ol$broad[is.na(ol$broad)] <- avgs["broad"]
+ol$bench[is.na(ol$bench)] <- avgs["bench"]
+
+
+# get best K value
+ol_k_percentages <- data.frame("K" = c(), "percentage" =c())
+i <- 3
+while(i <= 50){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    ol_train = ol[train_cases,]
+    ol_test = ol[test_cases,]
+    Xtrain = model.matrix(~ . - picktotal - 1, data=ol_train)
+    Xtest = model.matrix(~ . - picktotal - 1, data=ol_test)
+    
+    ytrain = ol_train$picktotal
+    ytest = ol_test$picktotal
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    knn_model$pred
+    rmse(ytest, knn_model$pred)
+    
+    ol_test$knn_round = as.integer(knn_model$pred/51) + 1
+    ol_test$round = as.integer(ol_test$picktotal/51) + 1
+    ol_test$idu <- as.numeric(row.names(ol_test))
+    num_correct = ol_test$idu[ol_test$knn_round == ol_test$round]
+    c(NROW(num_correct)/NROW(ol_test))
+  }
+  d = data.frame("K" = i, "percentage" = mean(avg_cols[["result"]]))
+  ol_k_percentages = rbind(ol_k_percentages, d)
+  i = i + 1
+}
+
+# graph of percentage correct per K value
+ol_k_percentages_graph = ggplot(data = ol_k_percentages) + 
+  geom_point(mapping = aes(x = K, y = percentage), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = percentage), color='red') + 
+  ylab("Guessed Round Correctly (%)")
+
+
+
+
+# K = 3 is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+ol_train = ol[train_cases,]
+ol_test = ol[test_cases,]
+Xtrain = model.matrix(~ . - picktotal - 1, data=ol_train)
+Xtest = model.matrix(~ . - picktotal - 1, data=ol_test)
+
+ytrain = ol_train$picktotal
+ytest = ol_test$picktotal
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=3)
+rmse(ytest, knn_model$pred)
+ol_test$knn = knn_model$pred
+ol_test$knn_round = as.integer(knn_model$pred/51) + 1
+ol_test$round = as.integer(ol_test$picktotal/51) + 1
+
+ol_test$idu <- as.numeric(row.names(ol_test))
+num_correct = ol_test$idu[ol_test$knn_round == ol_test$round]
+# scatter plot containing actual and predicted draft round. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 3
+ol_k_3 = ggplot(data = ol_test) + 
+  geom_point(mapping = aes(x = idu, y = round), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = round), color='red') + geom_point(aes(x = idu, y = knn_round), color='red')
+
+
+average_compare = do(100)*{
+  train_cases = sample.int(n, n_train, replace=FALSE)
+  test_cases = setdiff(1:n, train_cases)
+  ol_train = ol[train_cases,]
+  ol_test = ol[test_cases,]
+  Xtrain = model.matrix(~ . - picktotal - 1, data=ol_train)
+  Xtest = model.matrix(~ . - picktotal - 1, data=ol_test)
+  
+  ytrain = ol_train$picktotal
+  ytest = ol_test$picktotal
+  
+  scale_train = apply(Xtrain, 2, sd)
+  Xtilde_train = scale(Xtrain, scale = scale_train)
+  Xtilde_test = scale(Xtest, scale = scale_train)
+  
+  head(Xtrain, 2)
+  head(Xtilde_train, 2) %>% round(3)
+  knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=)
+  ol_test$knn = knn_model$pred
+  ol_test$knn_round = as.integer(knn_model$pred/51) + 1
+  ol_test$round = as.integer(ol_test$picktotal/51) + 1
+  ol_test$rand = sample(1:5, size = nrow(ol_test), replace = TRUE)
+  ol_test$rand
+  ol_test$idu <- as.numeric(row.names(ol_test))
+  num_correct = ol_test$idu[ol_test$knn_round == ol_test$round]
+  rand_correct = ol_test$idu[ol_test$rand == ol_test$round]
+  c(NROW(num_correct)/NROW(ol_test),
+    NROW(rand_correct)/NROW(ol_test))
+}
+# print this out to show comparison between our model and null model over 100 runs
+ol_correct = colMeans(average_compare)
+
+## Games Started
+ol <- read.csv("data/ol_combined.csv")
+ol = subset(ol, year <= 2008)
+ol = subset(ol, select=c("position", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
+ol = subset(ol, position == "OG" | position =="OT" | position=="C")
+n = nrow(ol)
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+n_train = round(0.8*n)  # round to nearest integer
+n_test = n - n_train
+
+
+drops <- c('position')
+ol = ol[ , !(names(ol) %in% drops)]
+ol[ol==0] <- NA
+avgs = colMeans(ol, na.rm=TRUE)
+ol$fortyyd[is.na(ol$fortyyd)] <- avgs["fortyyd"] 
+ol$twentyss[is.na(ol$twentyss)] <- avgs["twentyss"]
+ol$vertical[is.na(ol$vertical)] <- avgs["vertical"]
+ol$broad[is.na(ol$broad)] <- avgs["broad"]
+ol$bench[is.na(ol$bench)] <- avgs["bench"]
+
+# WR
+# RB
+# QB
+# Offensive Linemen: OT, OG, C
+
+# get best K value
+ol_games_k_rmse <- data.frame("K" = c(), "RMEAN_AVERAGE" =c())
+i <- 3
+while(i <= 30){
+  avg_cols = do(100)*{
+    train_cases = sample.int(n, n_train, replace=FALSE)
+    test_cases = setdiff(1:n, train_cases)
+    ol_train = ol[train_cases,]
+    ol_test = ol[test_cases,]
+    Xtrain = model.matrix(~ . - games_played - 1, data=ol_train)
+    Xtest = model.matrix(~ . - games_played - 1, data=ol_test)
+    
+    ytrain = ol_train$games_played
+    ytest = ol_test$games_played
+    
+    scale_train = apply(Xtrain, 2, sd)
+    Xtilde_train = scale(Xtrain, scale = scale_train)
+    Xtilde_test = scale(Xtest, scale = scale_train)
+    
+    head(Xtrain, 2)
+    head(Xtilde_train, 2) %>% round(3)
+    knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=i)
+    c(rmse(ytest, knn_model$pred))
+  }
+  d = data.frame("K" = i, "RMEAN_AVERAGE" = mean(avg_cols[["result"]]))
+  ol_games_k_rmse = rbind(ol_games_k_rmse, d)
+  i = i + 1
+}
+
+# graph of RMSE vs K value
+ol_games_k_rmse_graph = ggplot(data = ol_games_k_rmse) + 
+  geom_point(mapping = aes(x = K, y = RMEAN_AVERAGE), color='lightgrey') + 
+  theme_bw(base_size=18) + geom_path(aes(x = K, y = RMEAN_AVERAGE), color='red') + 
+  ylab("RMSE")
+
+
+
+
+# K = 9 is the best
+train_cases = sample.int(n, n_train, replace=FALSE)
+test_cases = setdiff(1:n, train_cases)
+ol_train = ol[train_cases,]
+ol_test = ol[test_cases,]
+Xtrain = model.matrix(~ . - games_played - 1, data=ol_train)
+Xtest = model.matrix(~ . - games_played - 1, data=ol_test)
+
+ytrain = ol_train$games_played
+ytest = ol_test$games_played
+
+scale_train = apply(Xtrain, 2, sd)
+Xtilde_train = scale(Xtrain, scale = scale_train)
+Xtilde_test = scale(Xtest, scale = scale_train)
+
+head(Xtrain, 2)
+head(Xtilde_train, 2) %>% round(3)
+knn_model = knn.reg(Xtilde_train, Xtilde_test, ytrain, k=9)
+ol_test$knn_games = as.integer(knn_model$pred) + 1
+ol_test = ol_test[order(ol_test$games_played),]
+row.names(ol_test) <- NULL
+ol_test$idu <- as.numeric(row.names(ol_test))
+# scatter plot containing actual and predicted games_played. Red is our prediction. Idu
+# is an arbitrary number meant to represent a unique player. K value is 9
+ol_knn_games_started = ggplot(data = ol_test) + 
+  geom_point(mapping = aes(x = idu, y = games_played), color='blue') + 
+  theme_bw(base_size=18) + geom_point(aes(x = idu, y = games_played), color='blue') + geom_point(aes(x = idu, y = knn_games), color='red')
+
+
+ol <- read.csv("data/ol_combined.csv")
+ol = subset(ol, year <= 2008)
+ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
+ol = subset(ol, position == "OG" | position =="OT" | position=="C")
+ol$picktotal[ol$picktotal == 0] = 255
+ol_picktotal_gamesplayed = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = picktotal, y = games_played), color='red') + 
+  theme_bw(base_size=18)
+
+## Figures
+
+ol <- read.csv("data/ol_combined.csv")
+ol = subset(ol, select=c("position", "picktotal", "fortyyd", "twentyss", "vertical", "broad", "bench", "games_played"))
+ol = subset(ol, position == "OG" | position =="OT" | position=="C")
+drops <- c('position')
+ol = ol[ , !(names(ol) %in% drops)]
+ol[ol==0] <- NA
+ol_fortyyd_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = fortyyd, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+ol_twentyss_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = twentyss, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+ol_vertical_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = vertical, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+ol_broad_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = broad, y = picktotal), color='red') + 
+  theme_bw(base_size=18) 
+
+ol_bench_picktotal = ggplot(data = ol) + 
+  geom_point(mapping = aes(x = bench, y = picktotal), color='red') + 
+  theme_bw(base_size=18)
 ```
 
 ## Abstract
 
-```{r cars}
-
-```
+The NFL combine measures various physical traits of prospective NFL players in order to help guide teams' choices in the upcoming NFL draft. We use K-nearest neighbor models to determine to what extent NFL combine results can be used to predict both draft postition and NFL success. We were able to design models that consistently outperform the null model in predicting draft position, especially at the Quarterback and Running back positions. However, our models for predicting NFL success in the way of games played make predictions that have almost no correlation with actual results. We conclude that, due to a shown correlation between draft position and nfl success and a correlation between performance in certain combine events and draft position, that it is worth exploring more sophisticated models in making these predictions.
 
 ## Introduction
 
-The NFL Scouting Combine is an annual event where prospective NFL players from around the nation show off their physical skills in various events in order to increase their draft position/chance of being drafted. The week-long event is heavily attended by both the media and NFL personnel, and is the subject of much speculation. Every year players see their draft prospects skyrocket or plummet based on their performance. However, it is becoming an increasingly popular opinion that too much weight is placed on Combine results as they do not accurately reflect real football situations. For instance, players will almost never sprint 40 yards in a straight line in an NFL game. Our goal is to determine to what extent it is possible to build statistcal models that predict the draft position and overall carreer success of players based solely on their combine data.
+The NFL Scouting Combine is an annual event where prospective NFL players from around the nation show off their physical skills in various events in order to increase their draft position/chance of being drafted. The week-long event is heavily attended by both the media and NFL personnel, and is the subject of much speculation. Every year players see their draft prospects skyrocket or plummet based on their performance. However, it is becoming an increasingly popular opinion that too much weight is placed on Combine results as they do not accurately reflect real football situations. For instance, players will almost never sprint 40 yards in a straight line in an NFL game. Our goal is to determine to what extent it is possible to build statistcal models that predict the draft position and overall carreer success of players based solely on their combine data. It's obvious why a model that predicts player success would be useful, coaches and general managers can use this information to decide who to pick. The application of a draft position predictor is less obvious. However, if it is accurate enough, general managers could use this information to guide their draft strategy by letting them know which players are likely to be available at which rounds. 
 
 ```{r pressure, echo=FALSE}
 
@@ -25,8 +1096,136 @@ The NFL Scouting Combine is an annual event where prospective NFL players from a
 
 ### The Data
 
+Combine results were collected from nflsavant.com. The data includes basic measurements such as the height and weight of each player, along with the results of 8 different combine events explained below:
+
+#### Forty Yard Dash
+
+A sprint covering 40 yards. Used to evaluate acceleration and speed.
+
+#### Twenty Yard Shuttle
+
+The athlete starts at the center cone of three cones, each a distance of 5 yards apart. The athlete then pushes off their dominant leg in the opposite direction for 5 yards and touches the line. After covering this distance and touching the line as quickly as possible, the athlete must reverse and go 10 yards in the opposite direction and again touch the line. Finally, they reverse direction again, ending the drill at the starting point after traveling another 5 yards. Used to evaluate quickness and change of direction ability.
+
+#### Three Cone Drill
+
+Three cones are placed five yards apart from each other forming a right angle. The athlete starts with one hand down on the ground and runs to the middle cone and touches it. The athlete then reverses direction back to the starting cone and touches it. The athlete reverses direction again but this time runs around the outside of the middle cone on the way to the far cone running around it in figure eight fashion on his way back around the outside of the middle cornering cone. 
+
+#### Standing vertical Jump
+
+A measure of an athletes standing vertical jump. It is measured based on the height the player is able to reach with his fingertips. It is used to evaluate leg strength and explosiveness.
+
+#### Standing Broad Jump
+
+This drill measures one’s lower body strength. The athlete positions himself behind the marked line, then once he is set, jumps horizontally off from both
+feet. The distance jumped is measured from the start line and to the point of heel contact or to the nearest body part.
+
+#### 225 bench press
+
+This is used to measure upper body strength. The athlete completes as many bench reps as possible.
+
 ### The Models
+
+#### Draft position
+
+  We created 4 models for predicting draft position. One for each offensive position group: Quarterbacks, Running backs, Wide Receivers, and Offensive Linemen. We decided to use a K-nearest neighbors model, which will use the results of the K most similar players to predict the draft position of a given player. We decided to use this model because the interactions between combine events may not be obvious and K nearest neighbors models are great at automatically taking interactions into account. 
+
+  There are many missing values for combine event results. We decided to not consider any events where the majority of players in a given position group did not participate in. For example, in the quarterback model, we did not include the 3 cone drill because the vast majority of QB's did not participate, but we did include the 3 cone drill in the models for the other three position groups. We figure that players are naturally going decide to participate in the events considered most important to their position, so this is a good natural filter for which events to include.
+  
+  We trained the models with overall pick number as the target variable. To evaluate the success of the models, we divided the draft into 5 equal sized groups(i.e. picks 1 - 51 were group 1, picks 52 - 103 group 2, etc), and looked at the rate at which each model predicted the correct group for a given player. To make theses results meaningful, we add a "null model" that simply picks a random number between 1 and 5 for each player.
+
+#### NFL Success
+
+Our methods for predicting NFL success will be much the same as for predicting draft position, except each model will be trained to predict total games played throughout their career as a target variable. We decided that ultimately what makes a successful draft pick is how much they are able to actually play and contribute to the team. Another benefit to using games played as a target variable is we can use it for all 4 models, whereas we would otherwise have to choose a different statistic for each model due to the huge difference in what consitutes success at each position.
+
+For these models, we only considered players that had already finished their career. We did this because very successful draft picks that are in the early stages of their career will be seen by the model as unsuccessful picks because they have not had the chance to play a high number of games.
 
 ## Results
 
+We evaluated the performance of each model by comparing the percentage of correct guesses each of our models(V1) made compared to the null model(V2). These values are averaged over 100 runs to reduce variance. 
+
+```{r draft_position, echo=FALSE}
+print("Quarterbacks:")
+qb_correct
+print("Wide Receivers:")
+wr_correct
+print("Running Backs:")
+rb_correct
+print("Offensive Linemen:")
+ol_correct
+```
+
+Here the models for quarterbacks and running backs consistently perform much better than the models for wide receivers and offensive linemen. However, none of the models perform significantly better than the null model.
+
+Next we will plot the games played predictions made by our models compared to the actual games played for a sample test set. The red dots represent our models' predictions and the blue dots represent the actual number of games played.
+
+#### Quarterbacks
+
+```{r qb_games_started, echo=FALSE}
+qb_knn_games_started
+```
+
+#### Wide Receivers
+
+```{r wr_games_started, echo=FALSE}
+wr_knn_games_started
+```
+
+#### Runningbacks
+```{r rb_games_started, echo=FALSE}
+
+rb_knn_games_started
+
+```
+
+#### Offensive Linemen
+```{r ol_games_started, echo=FALSE}
+
+ol_knn_games_started
+```
+
 ## Conclusion
+
+It's not surprising that our draft position models were not able to significantly outperform their respective null models. It makes sense that a lot more goes into the decision to draft a player than raw physical stats when most of these players have hours and hours of actual game footage. NFL teams already have a general idea of how they rank prospects before the combine begins, so it's possible that it would make more sense to model how combine results change the perceived value of a player. However, this would be difficult as NFL teams do not make their pre-combine rankings of players known. 
+
+What is surprising is that of the four position groups, quarterbacks were the second easiest to predict the draft position of. Quarterback is generally considered one of the more cerebral positions on the field, and consequently they are perceived as not relying on their physical ability as much as other positions. It is possible that quarterbacks tend to be concentrated in the first few rounds due to being one of the highest valued positions, and our model is able to learn this.
+
+Unsurpisingly, the games started models do even worse. The most obvious reason for this is that there is an extra layer between The combine and a player's NFL career. The models do best at predicting players that play around 0-75 games or so. This is likely due to the fact that as a player's number of games played goes up, they are increasingly likely to stop playing due to factors not related to ability such as injuries and simply deciding to retire. It's also true that games played is not a perfect measure of career success. Two players that play the same number of games can have much different performances in said games that our model cannot account for. 
+
+A possible flaw in both models is that the prototypical build for each position has likely changed over time. For example, certain positions like quarterback have become faster and more athletic in recent years. Meaning combine data from the early years of our data set will be less useful in predicting the results of more recent drafts.
+
+Figures 1-3 in the appendix show that there exists a correlation between games played and draft position, and also a correlation between performance in a number of combine events and draft position. This suggests that it is worth researching further if more sophisticated models can be used to more accurately predict these draft position and NFL success based on combine data.
+
+## Appendix
+
+### Figure 1: Draft position plotted against games started by position
+
+Top left: QB, Top right: WR, Bottom Left: RB, Bottom Right: OL
+
+```{r appendix_1, fig.hold='hold', out.width="50%", echo=FALSE, warning=FALSE}
+
+qb_picktotal_gamesplayed
+wr_picktotal_gamesplayed
+rb_picktotal_gamesplayed
+ol_picktotal_gamesplayed
+
+```
+
+### Figure 2: 40 yard dash plotted against draft position
+
+Left: Wide Receiver, Right: Runningback
+
+Note that a smaller forty yard dash time is better than a larger one.
+```{r appendix_2, fig.hold='hold', out.width="50%", echo=FALSE, warning=FALSE}
+
+wr_fortyyd_picktotal
+rb_fortyyd_picktotal
+
+```
+
+### Figure 3: Offensive line Bench Press plotted against draft position
+
+```{r appendix_3, fig.hold='hold', out.width="50%", echo=FALSE, warning=FALSE}
+
+ol_bench_picktotal
+
+```
