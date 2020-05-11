@@ -147,22 +147,22 @@ model(V2). These values are averaged over 100 runs to reduce variance.
     ## [1] "Quarterbacks:"
 
     ##        V1        V2 
-    ## 0.2947619 0.2061905
+    ## 0.2861905 0.2042857
 
     ## [1] "Wide Receivers:"
 
     ##        V1        V2 
-    ## 0.2162500 0.1983333
+    ## 0.2422917 0.2018750
 
     ## [1] "Running Backs:"
 
     ##        V1        V2 
-    ## 0.2737931 0.2044828
+    ## 0.2924138 0.1941379
 
     ## [1] "Offensive Linemen:"
 
     ##        V1        V2 
-    ## 0.2192727 0.2040000
+    ## 0.2123636 0.1921818
 
 Here the models for quarterbacks and running backs consistently perform
 much better than the models for wide receivers and offensive linemen.
